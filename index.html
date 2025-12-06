@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Soundboard | JavaScript Midterm</title>
+  <style>
+    /* ---------- Global Styles ---------- */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #4f46e5, #020617);
+      color: #0f172a;
+    }
+
+    /* ---------- Card Container ---------- */
+    .card {
+      width: min(900px, 95vw);
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      padding: 22px 26px 26px;
+      color: #e5e7eb;
+      backdrop-filter: blur(12px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .title-group h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e5e7eb;
+      letter-spacing: 0.03em;
+    }
+
+    .title-group p {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.7);
+      font-size: 0.75rem;
+      color: #c7d2fe;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(120deg, rgba(30, 64, 175, 0.5), rgba(15, 23, 42, 0.9));
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+    }
+
+    /* ---------- Layout ---------- */
+    .card-body {
+      display: grid;
+      grid-template-columns: 2.2fr 1.3fr;
+      gap: 22px;
+    }
+
+    @media (max-width: 768px) {
+      .card-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ---------- Sound Grid ---------- */
+    .sound-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .sound-btn {
+      position: relative;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 12px;
+      background: radial-gradient(circle at top left, #4f46e5, #1f2937);
+      color: #e5e7eb;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease,
+        background 0.18s ease,
+        border 0.12s ease;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      overflow: hidden;
+    }
+
+    .sound-btn span.label {
+      font-weight: 600;
+      font-size: 0.98rem;
+    }
+
+    .sound-btn span.hint {
+      font-size: 0.7rem;
+      margin-top: 3px;
+      color: #cbd5f5;
+      opacity: 0.85;
+    }
+
+    .sound-emoji {
+      position: absolute;
+      right: 12px;
+      top: 10px;
+      font-size: 1.4rem;
+      filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.35));
+    }
+
+    .sound-btn::after {
+      /* animated ripple glow */
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      background: radial-gradient(circle at center, rgba(248, 250, 252, 0.18), transparent 60%);
+      transition: opacity 0.18s ease;
+      pointer-events: none;
+    }
+
+    .sound-btn:hover {
+      transform: translateY(-2px) translateZ(0);
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.95);
+      background: radial-gradient(circle at top left, #6366f1, #020617);
+    }
+
+    .sound-btn:active {
+      transform: translateY(0px) scale(0.985);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.9) inset;
+    }
+
+    .sound-btn.active {
+      border-color: #22c55e;
+    }
+
+    .sound-btn.active::after {
+      opacity: 1;
+    }
+
+    .key-chip {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.8);
+    }
+
+    /* ---------- Volume & Controls ---------- */
+    .controls-panel {
+      padding: 12px 12px 10px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.95));
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .controls-panel h2 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+
+    .slider-group {
+      margin-bottom: 14px;
+    }
+
+    .slider-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+      color: #9ca3af;
+    }
+
+    .slider-label-row span.value {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      color: #e5e7eb;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 999px;
+      background: #0f172a;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #6366f1;
+      border: 2px solid #e5e7eb;
+      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.35);
+      transition: transform 0.12s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.05);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #6366f1;
+      border: 2px solid #e5e7eb;
+      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.35);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 999px;
+      background: #0f172a;
+    }
+
+    /* ---------- Mute Toggle ---------- */
+    .mute-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .mute-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      color: #9ca3af;
+    }
+
+    .mute-indicator {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.9);
+      transition: background 0.18s, box-shadow 0.18s;
+    }
+
+    .mute-indicator.muted {
+      background: #ef4444;
+      box-shadow: 0 0 6px rgba(248, 113, 113, 0.95);
+    }
+
+    .mute-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      padding: 6px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      background: radial-gradient(circle at top left, #1f2937, #020617);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease, border 0.15s ease;
+    }
+
+    .mute-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9);
+    }
+
+    .mute-btn.active {
+      background: radial-gradient(circle at top left, #7f1d1d, #020617);
+      border-color: rgba(248, 113, 113, 0.9);
+    }
+
+    .mute-icon {
+      font-size: 1rem;
+    }
+
+    /* ---------- Now Playing ---------- */
+    .now-playing {
+      margin-top: 10px;
+      padding: 10px 9px;
+      border-radius: 11px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #9ca3af;
+    }
+
+    .now-playing-label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 0.7rem;
+      color: #6b7280;
+    }
+
+    .now-playing-name {
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .now-playing-icon {
+      font-size: 1rem;
+    }
+
+    /* ---------- Help Text ---------- */
+    .hint-row {
+      margin-top: 8px;
+      font-size: 0.76rem;
+      color: #6b7280;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .hint-row strong {
+      color: #e5e7eb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Top Header -->
+    <header class="card-header">
+      <div class="title-group">
+        <h1>Simple Soundboard</h1>
+        <p>JavaScript Midterm · Audio API · Event Listeners · DOM Grid Layout</p>
+      </div>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        <span>Powered by <strong>new Audio()</strong></span>
+      </div>
+    </header>
+
+    <main class="card-body">
+      <!-- Left: Sound Grid -->
+      <section>
+        <div class="sound-grid" id="soundGrid">
+          <!-- Buttons are created in HTML (mapped in JS) -->
+          <button class="sound-btn" data-sound-id="dog">
+            <span class="sound-emoji">🐶</span>
+            <span class="label">Dog Bark</span>
+            <span class="hint">Play a cute woof</span>
+            <span class="key-chip">Key: 1</span>
+          </button>
+
+          <button class="sound-btn" data-sound-id="clap">
+            <span class="sound-emoji">👏</span>
+            <span class="label">Clap</span>
+            <span class="hint">Crowd applause</span>
+            <span class="key-chip">Key: 2</span>
+          </button>
+
+          <button class="sound-btn" data-sound-id="pop">
+            <span class="sound-emoji">🫧</span>
+            <span class="label">Pop</span>
+            <span class="hint">Bubble pop effect</span>
+            <span class="key-chip">Key: 3</span>
+          </button>
+
+          <button class="sound-btn" data-sound-id="laugh">
+            <span class="sound-emoji">😂</span>
+            <span class="label">Laugh</span>
+            <span class="hint">Funny giggle</span>
+            <span class="key-chip">Key: 4</span>
+          </button>
+
+          <button class="sound-btn" data-sound-id="bell">
+            <span class="sound-emoji">🔔</span>
+            <span class="label">Bell</span>
+            <span class="hint">Soft chime</span>
+            <span class="key-chip">Key: 5</span>
+          </button>
+
+          <button class="sound-btn" data-sound-id="wow">
+            <span class="sound-emoji">🤯</span>
+            <span class="label">Wow</span>
+            <span class="hint">Surprise reaction</span>
+            <span class="key-chip">Key: 6</span>
+          </button>
+        </div>
+
+        <div class="hint-row">
+          <span><strong>Tip:</strong> You can also press keys <strong>1–6</strong> to play the sounds.</span>
+          <span><strong>Goal:</strong> Focus on Audio API + DOM events.</span>
+        </div>
+      </section>
+
+      <!-- Right: Controls -->
+      <aside class="controls-panel">
+        <h2>Sound Controls</h2>
+
+        <!-- Volume Slider -->
+        <div class="slider-group">
+          <div class="slider-label-row">
+            <span>Master Volume</span>
+            <span class="value" id="volumeValue">80%</span>
+          </div>
+          <input
+            type="range"
+            id="volumeSlider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="0.8"
+            aria-label="Volume slider"
+          />
+        </div>
+
+        <!-- Mute -->
+        <div class="mute-row">
+          <div class="mute-left">
+            <div class="mute-indicator" id="muteIndicator"></div>
+            <span id="muteStatusText">Sound is <strong>On</strong></span>
+          </div>
+          <button class="mute-btn" id="muteButton">
+            <span class="mute-icon" id="muteIcon">🔊</span>
+            <span class="mute-label-text">Mute (M)</span>
+          </button>
+        </div>
+
+        <!-- Now Playing -->
+        <div class="now-playing" id="nowPlayingBox">
+          <span class="now-playing-icon">🎵</span>
+          <div>
+            <div class="now-playing-label">Now Playing</div>
+            <div class="now-playing-name" id="nowPlayingName">Nothing yet. Click a button!</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // ------------------------------
+    // Simple Soundboard - JavaScript
+    // ------------------------------
+    // This project shows:
+    // 1. Audio API (new Audio())
+    // 2. Button click events
+    // 3. Keyboard events
+    // 4. DOM updates (text, CSS classes)
+    // 5. A single shared volume + mute
+
+    // Map each button's data-sound-id to an Audio object
+   const soundMap = {
+  dog: {
+    label: "Dog Bark",
+    file: "dog.mp3",
+    audio: null
+  },
+  clap: {
+    label: "Clap",
+    file: "clap.mp3",
+    audio: null
+  },
+  pop: {
+    label: "Pop",
+    file: "pop.mp3",
+    audio: null
+  },
+  laugh: {
+    label: "Laugh",
+    file: "laugh.mp3",
+    audio: null
+  },
+  bell: {
+    label: "Bell",
+    file: "bell.mp3",
+    audio: null
+  },
+  wow: {
+    label: "Wow",
+    file: "wow.mp3",
+    audio: null
+  }
+};
+
+
+    // Global audio settings
+    let globalVolume = 0.8;
+    let isMuted = false;
+    let lastPlayedId = null;
+
+    // DOM elements
+    const buttons = document.querySelectorAll(".sound-btn");
+    const volumeSlider = document.getElementById("volumeSlider");
+    const volumeValue = document.getElementById("volumeValue");
+    const muteButton = document.getElementById("muteButton");
+    const muteIndicator = document.getElementById("muteIndicator");
+    const muteStatusText = document.getElementById("muteStatusText");
+    const muteIcon = document.getElementById("muteIcon");
+    const nowPlayingName = document.getElementById("nowPlayingName");
+
+    // ----------------------
+    // 1. Initialize Audio
+    // ----------------------
+    function initSounds() {
+      Object.keys(soundMap).forEach((id) => {
+        const { file } = soundMap[id];
+        const audio = new Audio(file);
+        audio.preload = "auto";
+        audio.volume = globalVolume;
+        audio.muted = isMuted;
+        soundMap[id].audio = audio;
+      });
+    }
+
+    // ----------------------
+    // 2. Play a Sound
+    // ----------------------
+    function playSound(id) {
+  const soundEntry = soundMap[id];
+  if (!soundEntry || !soundEntry.audio) return;
+
+  // 1️⃣ Stop all other sounds
+  Object.values(soundMap).forEach(entry => {
+    if (entry.audio) {
+      entry.audio.pause();        // stop playback
+      entry.audio.currentTime = 0; // rewind to start
+    }
+  });
+
+  // 2️⃣ Remove previous active visual state
+  if (lastPlayedId) {
+    const prevBtn = document.querySelector(
+      `.sound-btn[data-sound-id="${lastPlayedId}"]`
+    );
+    if (prevBtn) prevBtn.classList.remove("active");
+  }
+
+  // 3️⃣ Play the selected sound
+  const audio = soundEntry.audio;
+  audio.currentTime = 0;
+  audio.play().catch(err => {
+    console.warn("Audio play blocked (user interaction required):", err);
+  });
+
+  // 4️⃣ Update "Now Playing" UI
+  nowPlayingName.textContent = soundEntry.label;
+
+  const currentBtn = document.querySelector(
+    `.sound-btn[data-sound-id="${id}"]`
+  );
+  if (currentBtn) currentBtn.classList.add("active");
+
+  lastPlayedId = id;
+}
+
+
+    // ----------------------
+    // 3. Volume Control
+    // ----------------------
+    function updateVolume(newValue) {
+      globalVolume = parseFloat(newValue);
+      volumeValue.textContent = Math.round(globalVolume * 100) + "%";
+
+      Object.values(soundMap).forEach((entry) => {
+        if (entry.audio) {
+          entry.audio.volume = globalVolume;
+        }
+      });
+    }
+
+    volumeSlider.addEventListener("input", (event) => {
+      updateVolume(event.target.value);
+    });
+
+    // ----------------------
+    // 4. Mute / Unmute
+    // ----------------------
+    function setMuteState(muted) {
+      isMuted = muted;
+
+      Object.values(soundMap).forEach((entry) => {
+        if (entry.audio) {
+          entry.audio.muted = isMuted;
+        }
+      });
+
+      // Update UI
+      if (isMuted) {
+        muteIndicator.classList.add("muted");
+        muteStatusText.innerHTML = 'Sound is <strong>Muted</strong>';
+        muteButton.classList.add("active");
+        muteIcon.textContent = "🔇";
+      } else {
+        muteIndicator.classList.remove("muted");
+        muteStatusText.innerHTML = 'Sound is <strong>On</strong>';
+        muteButton.classList.remove("active");
+        muteIcon.textContent = "🔊";
+      }
+    }
+
+    muteButton.addEventListener("click", () => {
+      setMuteState(!isMuted);
+    });
+
+    // ----------------------
+    // 5. Button Click Events
+    // ----------------------
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-sound-id");
+        playSound(id);
+      });
+    });
+
+    // ----------------------
+    // 6. Keyboard Shortcuts
+    // ----------------------
+    // Map keys 1–6 to sounds (dog, clap, pop, laugh, bell, wow)
+    const keyToSoundId = {
+      "1": "dog",
+      "2": "clap",
+      "3": "pop",
+      "4": "laugh",
+      "5": "bell",
+      "6": "wow",
+      // 'm' for mute toggle
+      m: "muteToggle",
+      M: "muteToggle"
+    };
+
+    document.addEventListener("keydown", (event) => {
+      const action = keyToSoundId[event.key];
+      if (!action) return;
+
+      if (action === "muteToggle") {
+        setMuteState(!isMuted);
+        return;
+      }
+
+      playSound(action);
+    });
+
+    // ----------------------
+    // 7. Initialize on Load
+    // ----------------------
+    initSounds();
+    updateVolume(volumeSlider.value);
+    setMuteState(false); // start unmuted
+  </script>
+</body>
+</html>
